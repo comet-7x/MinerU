@@ -201,18 +201,24 @@ class MagicModel:
         self.ref_text_blocks = []
         self.phonetic_blocks = []
         self.list_blocks = []
+        chart_body_indices = [j for j, b in enumerate(blocks) if b["type"] == BlockType.CHART_BODY]
+        image_body_indices = [j for j, b in enumerate(blocks) if b["type"] == BlockType.IMAGE_BODY]
+
+        def nearest_body_is_chart(idx):
+            min_chart = min((abs(idx - j) for j in chart_body_indices), default=float('inf'))
+            min_image = min((abs(idx - j) for j in image_body_indices), default=float('inf'))
+            return min_chart <= min_image and min_chart != float('inf')
+
         for i, block in enumerate(blocks):
             match block["type"]:
                 case BlockType.IMAGE_CAPTION:
-                    next_type = blocks[i + 1]["type"] if i + 1 < len(blocks) else None
-                    if next_type == BlockType.CHART_BODY:
+                    if nearest_body_is_chart(i):
                         block["type"] = BlockType.CHART_CAPTION
                         self.chart_blocks.append(block)
                     else:
                         self.image_blocks.append(block)
                 case BlockType.IMAGE_FOOTNOTE:
-                    prev_type = blocks[i - 1]["type"] if i > 0 else None
-                    if prev_type == BlockType.CHART_BODY:
+                    if nearest_body_is_chart(i):
                         block["type"] = BlockType.CHART_FOOTNOTE
                         self.chart_blocks.append(block)
                     else:
